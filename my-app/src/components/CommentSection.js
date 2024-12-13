@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { addDoc, collection } from "firebase/firestore";
-import { firestore, auth } from "../lib/firebase";
+import { firestore } from "../lib/firebase";
+import styles from "../styles/CommentSection.module.css";
 
 const CommentSection = ({
   postId,
@@ -11,7 +12,6 @@ const CommentSection = ({
 }) => {
   const [newComment, setNewComment] = useState("");
 
-  // Handle comment submission
   const handleComment = async (e) => {
     e.preventDefault();
     if (newComment.trim()) {
@@ -20,8 +20,9 @@ const CommentSection = ({
           text: newComment,
           createdAt: new Date(),
           userId: user.uid,
+          username: user.displayName || "Anonymous",
         });
-        setNewComment(""); // Clear comment input
+        setNewComment("");
       } catch (error) {
         console.error("Error adding comment:", error);
       }
@@ -29,54 +30,51 @@ const CommentSection = ({
   };
 
   return (
-    <div>
-      <h3>Comments</h3>
-      {postComments.length > 0 && (
-        <>
-          {/* Show only the first comment initially */}
-          <div>
-            <p>{postComments[0].text}</p>
-            <small>
-              {postComments[0].createdAt
-                ? new Date(
-                    postComments[0].createdAt.seconds * 1000
-                  ).toLocaleString()
+    <div className={styles.commentSection}>
+      <h3 className={styles.commentHeader}>Comments</h3>
+      <ul className={styles.commentList}>
+        {(expandedComments.has(postId)
+          ? postComments
+          : postComments.slice(0, 1)
+        ).map((comment, index) => (
+          <li key={index} className={styles.commentItem}>
+            <span>
+              <span className={styles.commentUser}>
+                {comment.username || "Anonymous"}
+              </span>
+              <span className={styles.commentText}>{comment.text}</span>
+            </span>
+            <small className={styles.commentDate}>
+              {comment.createdAt
+                ? new Date(comment.createdAt.seconds * 1000).toLocaleString()
                 : "Date unavailable"}
             </small>
-          </div>
+          </li>
+        ))}
+      </ul>
 
-          {/* Show "Show More Comments" button if there are more comments */}
-          {postComments.length > 1 && !expandedComments.has(postId) && (
-            <button onClick={() => toggleComments(postId)}>
-              Show More Comments
-            </button>
-          )}
-
-          {/* If expanded, show all comments */}
-          {expandedComments.has(postId) &&
-            postComments.slice(1).map((comment, index) => (
-              <div key={index}>
-                <p>{comment.text}</p>
-                <small>
-                  {comment.createdAt
-                    ? new Date(
-                        comment.createdAt.seconds * 1000
-                      ).toLocaleString()
-                    : "Date unavailable"}
-                </small>
-              </div>
-            ))}
-        </>
+      {postComments.length > 1 && (
+        <span
+          onClick={() => toggleComments(postId)}
+          className={styles.toggleText}
+        >
+          {expandedComments.has(postId)
+            ? "Hide Comments"
+            : "Show More Comments"}
+        </span>
       )}
 
       {user && (
-        <form onSubmit={handleComment}>
+        <form onSubmit={handleComment} className={styles.commentForm}>
           <textarea
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Write a comment..."
+            placeholder="Type a comment..."
+            className={styles.commentTextarea}
           ></textarea>
-          <button type="submit">Comment</button>
+          <button type="submit" className={styles.commentSubmitButton}>
+            Post
+          </button>
         </form>
       )}
     </div>

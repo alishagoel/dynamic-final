@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { signOut } from "firebase/auth";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, doc, getDoc } from "firebase/firestore";
 import { firestore, auth } from "../lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import CommentSection from "../components/CommentSection";
@@ -9,13 +8,15 @@ import AddPost from "../components/AddPost";
 import MusicEmbed from "../components/MusicEmbed";
 import { likePost } from "../utils/likePost";
 import { toggleComments } from "../utils/toggleComments";
-import { deletePost } from "../utils/deletePost";
-import Navbar from "../components/Navbar"; // Importing Navbar
+import Navbar from "../components/Navbar";
+import { FiHeart } from "react-icons/fi";
+import styles from "../styles/Home.module.css";
 
 export default function Home() {
   const [user, loading] = useAuthState(auth);
   const [posts, setPosts] = useState([]);
   const [expandedComments, setExpandedComments] = useState(new Set());
+  const [usersDisplayNames, setUsersDisplayNames] = useState({});
   const router = useRouter();
 
   useEffect(() => {
@@ -32,17 +33,34 @@ export default function Home() {
           comments: [],
         }));
 
-        // Sort posts by `createdAt` (latest first)
         fetchedPosts.sort((a, b) => {
           if (a.createdAt && b.createdAt) {
             return b.createdAt.seconds - a.createdAt.seconds;
           }
-          return 0; // Keep order if `createdAt` is missing
+          return 0;
         });
 
         setPosts(fetchedPosts);
 
         fetchedPosts.forEach((post) => {
+          const userId = post.userId;
+
+          if (!usersDisplayNames[userId]) {
+            const userRef = doc(firestore, "users", userId);
+            getDoc(userRef)
+              .then((docSnapshot) => {
+                if (docSnapshot.exists()) {
+                  setUsersDisplayNames((prevNames) => ({
+                    ...prevNames,
+                    [userId]: docSnapshot.data().displayName,
+                  }));
+                }
+              })
+              .catch((error) => {
+                console.error("Error fetching user display name:", error);
+              });
+          }
+
           const unsubscribeComments = onSnapshot(
             collection(firestore, "posts", post.id, "comments"),
             (commentSnapshot) => {
@@ -62,86 +80,68 @@ export default function Home() {
     );
 
     return () => unsubscribePosts();
-  }, [user, loading]);
-
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      router.push("/login");
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
-  };
+  }, [user, loading, usersDisplayNames]);
 
   return (
-    <div>
-      {/* Navbar component */}
+    <div className={styles.homeContainer}>
       <Navbar user={user} />
-
-      <main style={{ marginTop: "80px", padding: "20px" }}>
-        <h1>Welcome to the Social Media App</h1>
-        {user && (
-          <>
-            <button onClick={handleSignOut}>Sign Out</button>
-            <button onClick={() => router.push("/profile")}>
-              Go to Profile
-            </button>
-          </>
-        )}
-
-        {/* Add Post Component */}
+      <main className={styles.mainContent}>
         {user && <AddPost user={user} />}
 
-        <div>
-          <h2>Recent Posts</h2>
+        <div className={styles.postsContainer}>
           {posts.length === 0 ? (
-            <p>No posts available.</p>
+            <p className={styles.noPostsMessage}>No posts available.</p>
           ) : (
             posts.map((post) => (
-              <div key={post.id} style={{ marginBottom: "20px" }}>
-                <p>{post.text}</p>
-                <small>
-                  {post.createdAt
-                    ? new Date(post.createdAt.seconds * 1000).toLocaleString()
-                    : "Date unavailable"}
-                </small>
-                <div>
-                  <button
-                    onClick={() =>
-                      likePost(post.id, user.uid, post.likes || [])
-                    }
-                  >
-                    {post.likes && post.likes.includes(user.uid)
-                      ? "Unlike"
-                      : "Like"}
-                  </button>
-                  <span>{post.likes ? post.likes.length : 0} likes</span>
+              <div key={post.id} className={styles.postCard}>
+                <div className={styles.postHeader}>
+                  <h3 className={styles.postUser}>
+                    {usersDisplayNames[post.userId] || "Anonymous"}
+                  </h3>
+                  <small className={styles.postDate}>
+                    {post.createdAt
+                      ? new Date(post.createdAt.seconds * 1000).toLocaleString()
+                      : "Date unavailable"}
+                  </small>
                 </div>
 
-                {/* Music Embed */}
-                <MusicEmbed musicUrl={post.musicUrl} />
+                <p className={styles.postText}>{post.text}</p>
 
-                {/* Comment Section */}
-                <CommentSection
-                  postId={post.id}
-                  postComments={post.comments}
-                  user={user}
-                  expandedComments={expandedComments}
-                  toggleComments={() =>
-                    toggleComments(
-                      post.id,
-                      expandedComments,
-                      setExpandedComments
-                    )
-                  }
-                />
+                {post.musicUrl && <MusicEmbed musicUrl={post.musicUrl} />}
 
-                {/* Delete Post Button (Only for the current user's posts) */}
-                {post.userId === user.uid && (
-                  <button onClick={() => deletePost(post.id)}>
-                    Delete Post
+                <div className={styles.likeSection}>
+                  <button
+                    onClick={() =>
+                      likePost(post.id, user?.uid, post.likes || [])
+                    }
+                    className={styles.likeButton}
+                  >
+                    <FiHeart
+                      className={
+                        post.likes && post.likes.includes(user?.uid)
+                          ? styles.likedHeart
+                          : styles.unlikedHeart
+                      }
+                    />
+                    {post.likes ? post.likes.length : 0}
                   </button>
-                )}
+                </div>
+
+                <div className={styles.commentSection}>
+                  <CommentSection
+                    postId={post.id}
+                    postComments={post.comments}
+                    user={user}
+                    expandedComments={expandedComments}
+                    toggleComments={() =>
+                      toggleComments(
+                        post.id,
+                        expandedComments,
+                        setExpandedComments
+                      )
+                    }
+                  />
+                </div>
               </div>
             ))
           )}

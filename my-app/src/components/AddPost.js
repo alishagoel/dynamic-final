@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { firestore, auth } from "../lib/firebase";
+import { firestore } from "../lib/firebase";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import MusicEmbed from "./MusicEmbed"; // Import the MusicEmbed component
-import styles from "../styles/AddPost.module.css"; // Import the styles
+import MusicEmbed from "./MusicEmbed";
+import styles from "../styles/AddPost.module.css";
 
 export default function AddPost({ user }) {
   const [text, setText] = useState("");
@@ -28,7 +28,7 @@ export default function AddPost({ user }) {
   return (
     <form onSubmit={handlePostSubmit} className={styles.addPostForm}>
       <textarea
-        placeholder="Write your post..."
+        placeholder="Share a song...or some thoughts"
         value={text}
         onChange={(e) => setText(e.target.value)}
         required
@@ -36,7 +36,7 @@ export default function AddPost({ user }) {
       />
       <input
         type="url"
-        placeholder="Add music URL (YouTube or Spotify)"
+        placeholder="Add music URL (YouTube, Spotify or Soundcloud)"
         value={musicUrl}
         onChange={(e) => setMusicUrl(e.target.value)}
         className={styles.musicUrlInput}
@@ -45,7 +45,6 @@ export default function AddPost({ user }) {
         Post
       </button>
 
-      {/* Display the embedded music link */}
       {musicUrl && <MusicEmbed musicUrl={musicUrl} />}
     </form>
   );

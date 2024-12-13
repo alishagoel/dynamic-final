@@ -5,9 +5,8 @@ export default function MusicEmbed({ musicUrl }) {
   }
 
   let iframeSrc = "";
-  let iframeHeight = "200"; // Default height for non-SoundCloud platforms
+  let iframeHeight = "200";
 
-  // Check if the URL is from YouTube, Spotify, or SoundCloud
   const isYouTube = musicUrl.includes("youtube.com");
   const isSpotify = musicUrl.includes("spotify.com");
   const isSoundCloud = musicUrl.includes("soundcloud.com");
@@ -15,14 +14,16 @@ export default function MusicEmbed({ musicUrl }) {
   if (isYouTube) {
     const videoId = new URL(musicUrl).searchParams.get("v");
     iframeSrc = `https://www.youtube.com/embed/${videoId}`;
+    iframeHeight = "340";
   } else if (isSpotify) {
     const trackId = musicUrl.split("/").pop().split("?")[0];
     iframeSrc = `https://open.spotify.com/embed/track/${trackId}`;
+    iframeHeight = "80";
   } else if (isSoundCloud) {
     iframeSrc = `https://w.soundcloud.com/player/?url=${encodeURIComponent(
       musicUrl
     )}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`;
-    iframeHeight = "300"; // Set higher height for SoundCloud embeds
+    iframeHeight = "400";
   }
 
   return (
@@ -31,7 +32,7 @@ export default function MusicEmbed({ musicUrl }) {
         <iframe
           src={iframeSrc}
           width="100%"
-          height={iframeHeight} // Dynamically set height
+          height={iframeHeight}
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
