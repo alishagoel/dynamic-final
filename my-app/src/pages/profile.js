@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { collection, onSnapshot, doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  doc,
+  getDoc,
+  updateDoc,
+} from "firebase/firestore";
 import { firestore, auth } from "../lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import CommentSection from "../components/CommentSection";
@@ -18,6 +24,8 @@ export default function Profile() {
   const [posts, setPosts] = useState([]);
   const [expandedComments, setExpandedComments] = useState(new Set());
   const [usersDisplayNames, setUsersDisplayNames] = useState({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [newDisplayName, setNewDisplayName] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -86,11 +94,70 @@ export default function Profile() {
     return () => unsubscribePosts();
   }, [user, loading, usersDisplayNames]);
 
+  const handleDisplayNameChange = async () => {
+    if (newDisplayName && newDisplayName !== user.displayName) {
+      try {
+        const userRef = doc(firestore, "users", user.uid);
+        await updateDoc(userRef, {
+          displayName: newDisplayName,
+        });
+
+        setUsersDisplayNames((prevNames) => ({
+          ...prevNames,
+          [user.uid]: newDisplayName,
+        }));
+
+        user.displayName = newDisplayName;
+
+        setIsEditing(false);
+      } catch (error) {
+        console.error("Error updating display name:", error.message);
+      }
+    }
+  };
+
   return (
     <div className={styles.profileContainer}>
       <Navbar user={user} />
       <main className={styles.mainContent}>
         <h1>{user?.displayName}'s Profile</h1>
+
+        <div className={styles.editDisplayNameContainer}>
+          {isEditing ? (
+            <div className={styles.editDisplayName}>
+              <input
+                className={styles.displayNameInput}
+                type="text"
+                value={newDisplayName}
+                onChange={(e) => setNewDisplayName(e.target.value)}
+                placeholder="Enter new display name"
+              />
+              <button
+                className={styles.saveButton}
+                onClick={handleDisplayNameChange}
+              >
+                Save
+              </button>
+              <button
+                className={styles.cancelButton}
+                onClick={() => setIsEditing(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className={styles.editButtonContainer}>
+              <button
+                className={styles.editButton}
+                onClick={() => setIsEditing(true)}
+              >
+                Edit Display Name
+              </button>
+            </div>
+          )}
+        </div>
+
+        <h2 className={styles.postsHeader}>Your Posts</h2>
 
         {user && <AddPost user={user} />}
 
